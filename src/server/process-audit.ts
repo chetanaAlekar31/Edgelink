@@ -5,6 +5,7 @@ import { logError, MissingConfigurationError, ServiceUnavailableError } from "@/
 import { analyseSeo } from "@/server/claude";
 import type { SeoAnalysis } from "@/lib/seo-analysis";
 import { analyseOnPage, checkRobotsAndSitemap, crawlUrl, validateSchemaMarkup } from "@/server/crawl";
+import { deliverEmail } from "@/server/email";
 import { writeAuditPdf } from "@/server/pdf";
 import { deliverWhatsApp, loadPageSpeed, loadRankings, loadSearchConsole } from "@/server/providers";
 
@@ -175,6 +176,24 @@ export async function processAudit(auditId: string) {
           pdfPath: filePath,
           score: seoScore,
           errorMessage: "The WhatsApp notification could not be sent.",
+        },
+      });
+    }
+
+    try {
+      const email = await deliverEmail(client?.email);
+      await prisma.emailNotificationLog.create({
+        data: { clientId: audit.clientId, auditId, status: email.status, recipient: client?.email ?? null },
+      });
+    } catch (error) {
+      logError("email", error);
+      await prisma.emailNotificationLog.create({
+        data: {
+          clientId: audit.clientId,
+          auditId,
+          status: "failed",
+          recipient: client?.email ?? null,
+          errorMessage: "The email notification could not be sent.",
         },
       });
     }

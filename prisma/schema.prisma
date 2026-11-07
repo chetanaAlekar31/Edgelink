@@ -21,6 +21,7 @@ model Client {
   audits        SeoAudit[]
   reports       Report[]
   notifications WhatsAppNotificationLog[]
+  emails        EmailNotificationLog[]
 }
 
 model SeoAudit {
@@ -43,6 +44,7 @@ model SeoAudit {
   recommendations SeoRecommendation[]
   report        Report?
   notifications WhatsAppNotificationLog[]
+  emails        EmailNotificationLog[]
 
   @@index([clientId, createdAt])
   @@index([status])
@@ -125,6 +127,22 @@ model WhatsAppNotificationLog {
   errorMessage String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([auditId])
+}
+
+model EmailNotificationLog {
+  id           String    @id @default(cuid())
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  auditId      String?
+  audit        SeoAudit? @relation(fields: [auditId], references: [id], onDelete: SetNull)
+  status       String
+  recipient    String?
+  errorMessage String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([clientId])
   @@index([auditId])
