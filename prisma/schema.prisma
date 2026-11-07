@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id            String                     @id
+  name          String
+  websiteUrl    String
+  domain        String
+  contactPerson String
+  email         String
+  phone         String
+  auditStatus   String
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  audits        SeoAudit[]
+  reports       Report[]
+  notifications WhatsAppNotificationLog[]
+}
+
+model SeoAudit {
+  id            String                     @id @default(cuid())
+  clientId      String
+  client        Client                     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  websiteUrl    String
+  auditType     String
+  status        String
+  strategy      String?
+  keyword       String?
+  currentStep   String?
+  errorMessage  String?
+  seoScore      Float?
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  completedAt   DateTime?
+  result        AuditResult?
+  issues        SeoIssue[]
+  recommendations SeoRecommendation[]
+  report        Report?
+  notifications WhatsAppNotificationLog[]
+
+  @@index([clientId, createdAt])
+  @@index([status])
+}
+
+model AuditResult {
+  id           String   @id @default(cuid())
+  auditId      String   @unique
+  audit        SeoAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  crawlJson    Json?
+  pagespeedJson Json?
+  gscJson      Json?
+  schemaJson   Json?
+  onPageJson   Json?
+  technicalJson Json?
+  rankingsJson Json?
+  analysisJson Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model SeoIssue {
+  id        String   @id @default(cuid())
+  auditId   String
+  audit     SeoAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  source    String
+  title     String
+  detail    String
+  score     Float?
+  level     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([auditId])
+}
+
+model SeoRecommendation {
+  id                   String   @id @default(cuid())
+  auditId              String
+  audit                SeoAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  priority             String
+  category             String
+  finding              String
+  fix                  String
+  estimatedImpact      String
+  effort               String
+  falsifiabilityCheck  String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([auditId])
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  auditId     String   @unique
+  audit       SeoAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  reportType  String   @default("seo-audit")
+  status      String
+  filePath    String?
+  generatedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+model WhatsAppNotificationLog {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  auditId      String?
+  audit        SeoAudit? @relation(fields: [auditId], references: [id], onDelete: SetNull)
+  status       String
+  sid          String?
+  pdfPath      String?
+  score        Float?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([auditId])
+}
